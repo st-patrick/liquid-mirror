@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Liquid Mirror — Silver + No-Edge + Sharpen/Glow + Flat Ref</title>
+<style>
+  :root { --bg:#0e0f12; --card:#16181d; --fg:#e6e9ef; --muted:#9aa3b2; }
+  html, body { height:100%; }
+  body {
+    margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+    background:radial-gradient(80% 100% at 50% 0%, #13151a, #0b0c0f 70%); color:var(--fg);
+    display:grid; place-items:center; padding:32px;
+  }
+  .wrap { display:grid; gap:24px; grid-template-columns: minmax(320px,420px) 1fr; width:min(1200px, 94vw); align-items:start; }
+  .card { background:var(--card); border:1px solid #23262d; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25) inset, 0 10px 40px rgba(0,0,0,.4); }
+  .controls { display:grid; gap:12px; }
+  .row { display:grid; gap:10px; }
+  .row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  label { display:grid; gap:6px; font-weight:600; }
+  input[type="range"], select { width:100%; }
+  .btn { display:inline-flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid #272a31; background:#15171b; color:#e6ebf3; cursor:pointer; }
+  .btn:hover { background:#1a1d22; }
+  .chip{ background:#111317; padding:6px 10px; border-radius:10px; border:1px solid #2a2f37; color:#aeb6c6; }
+
+  .env-ui { position:relative; overflow:hidden; border-radius:18px; background:#0b0c0f; aspect-ratio: 2.2/1; }
+  .env-ui > canvas, .env-ui > .overlay { position:absolute; inset:0; width:100%; height:100%; display:block; pointer-events:none; }
+  .env-ui > .overlay { z-index: 2; }
+  .ui-label { margin-top:8px; color:#aeb6c6; font-weight:600; font-size:12px; text-align:center; }
+
+  .grid { display:grid; grid-template-columns:repeat(2, minmax(240px, 1fr)); gap:18px; align-items:start; }
+  .grid .wide { grid-column: span 2; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2 style="margin:4px 0 8px;">Liquid Mirror — Silver, Crisp, No-Edge</h2>
+      <p class="muted">Silver preset + front hemisphere webcam. No repeated edge pixels (zoom & margin), squircle normal fix, outer “pizza rim”, sharpen/glow, and a flat material reference.</p>
+
+      <div class="controls">
+        <div class="row cols-2">
+          <label>Projection
+            <select id="projection">
+              <option value="rect">Rectilinear</option>
+              <option value="equirect">Equirectangular</option>
+            </select>
+          </label>
+          <label>Horizontal FOV
+            <input id="hfov" type="range" min="40" max="180" step="1" value="100">
+            <div class="chip" id="hfovVal">100°</div>
+          </label>
+        </div>
+
+        <div class="row cols-3">
+          <label>Ripple
+            <input id="ripple" type="range" min="0" max="1" step="0.01" value="0.12">
+            <div class="chip" id="rippleVal">0.12</div>
+          </label>
+          <label>Env strength
+            <input id="envMix" type="range" min="0" max="1" step="0.01" value="0.55">
+            <div class="chip" id="envMixVal">0.55</div>
+          </label>
+          <label>Cam Zoom
+            <input id="camZoom" type="range" min="1.0" max="1.6" step="0.01" value="1.15">
+            <div class="chip" id="zoomVal">1.15×</div>
+          </label>
+        </div>
+
+        <div class="row cols-3">
+          <label>Blend
+            <select id="blend">
+              <option value="screen">Screen (default)</option>
+              <option value="overlay">Overlay</option>
+              <option value="soft">Soft Light</option>
+              <option value="mix">Linear Mix</option>
+            </select>
+          </label>
+          <label>Exposure
+            <input id="exposure" type="range" min="0.6" max="2.5" step="0.05" value="1.55">
+            <div class="chip" id="expVal">1.55</div>
+          </label>
+          <label>Saturation
+            <input id="saturation" type="range" min="0" max="1.8" step="0.05" value="1.0">
+            <div class="chip" id="satVal">1.00</div>
+          </label>
+        </div>
+
+        <div class="row cols-3">
+          <label>Sharpen
+            <input id="sharpen" type="range" min="0" max="1.2" step="0.02" value="0.45">
+            <div class="chip" id="sharpVal">0.45</div>
+          </label>
+          <label>Glow
+            <input id="glow" type="range" min="0" max="2.0" step="0.05" value="0.35">
+            <div class="chip" id="glowVal">0.35</div>
+          </label>
+          <label>Glow Threshold
+            <input id="glowT" type="range" min="0.3" max="1.0" step="0.02" value="0.65">
+            <div class="chip" id="glowTVal">0.65</div>
+          </label>
+        </div>
+
+        <div class="row cols-3">
+          <label>Edge Rim Amp
+            <input id="edgeAmp" type="range" min="0" max="1" step="0.01" value="0.35">
+            <div class="chip" id="edgeAmpVal">0.35</div>
+          </label>
+          <label>Edge Rim Width
+            <input id="edgeW" type="range" min="0.02" max="0.18" step="0.005" value="0.08">
+            <div class="chip" id="edgeWVal">0.08</div>
+          </label>
+          <button class="btn" id="flip">Flip webcam</button>
+        </div>
+
+        <div class="row cols-2">
+          <button class="btn" id="presetSilver">Silver preset</button>
+          <button class="btn" id="presetChrome">Chrome (strong)</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <!-- beveled card -->
+      <div>
+        <div class="env-ui wide" data-shape="bevel" data-base="#cfd3d9" style="border-radius:22px;"></div>
+        <div class="ui-label">Beveled Card (silver)</div>
+      </div>
+
+      <!-- pizza rim -->
+      <div>
+        <div class="env-ui" data-shape="pizza" data-base="#d7dbe0" style="border-radius:20px;"></div>
+        <div class="ui-label">Pizza Rim Button (edge crust)</div>
+      </div>
+
+      <!-- pill -->
+      <div>
+        <div class="env-ui" data-shape="pill" data-base="#d2d6db" style="border-radius:999px; aspect-ratio: 2.7/1;"></div>
+        <div class="ui-label">Pill (edge crust)</div>
+      </div>
+
+      <!-- squircle fixed -->
+      <div>
+        <div class="env-ui" data-shape="squircle" data-base="#cbd0d6" style="border-radius:24px; aspect-ratio:1.4/1;"></div>
+        <div class="ui-label">Squircle (smooth reflection)</div>
+      </div>
+
+      <!-- concave -->
+      <div>
+        <div class="env-ui" data-shape="concave" data-base="#d5d9de" style="border-radius:22px; aspect-ratio:1.7/1;"></div>
+        <div class="ui-label">Concave (inset center)</div>
+      </div>
+
+      <!-- flat reference -->
+      <div>
+        <div class="env-ui" data-shape="flat" data-base="#d9dce1" style="border-radius:16px; aspect-ratio:2.2/1;"></div>
+        <div class="ui-label">Flat Material Reference (no shape)</div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  if (!window.EnvMirror) window.EnvMirror = {};
+
+  /* Camera */
+  if (!window.EnvMirror.Camera) {
+    const CS = { stream:null, video:null, ready:false, flip:true };
+    async function ensureCamera(){
+      if (CS.ready && CS.video && !CS.video.paused) return CS;
+      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false });
+      const v = document.createElement("video");
+      v.autoplay = true; v.playsInline = true; v.muted = true; v.srcObject = stream; await v.play();
+      CS.stream = stream; CS.video = v; CS.ready = true; return CS;
+    }
+    window.EnvMirror.Camera = { ensure: ensureCamera, state: CS };
+  }
+  const Camera = window.EnvMirror.Camera;
+
+  /* WebGL */
+  if (!window.EnvMirror.makeGL) {
+    window.EnvMirror.makeGL = function(canvas){
+      const gl = canvas.getContext("webgl", { alpha:true, antialias:true, premultipliedAlpha:true });
+      if(!gl) throw new Error("WebGL not available");
+
+      function compile(type, src){
+        const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
+          const info = gl.getShaderInfoLog(s)||"compile error";
+          console.error("Shader compile error:\n", info, "\nSource:\n", src);
+          throw new Error(info);
+        }
+        return s;
+      }
+
+      const vsSrc = [
+        "attribute vec2 aPos;",
+        "varying vec2 vUv;",
+        "void main(){ vUv = aPos*0.5 + 0.5; gl_Position = vec4(aPos,0.,1.); }"
+      ].join("\n");
+
+      const fsSrc = [
+        "precision mediump float;",
+        "varying vec2 vUv;",
+        "uniform sampler2D uCam; uniform vec2 uCamSize; uniform vec2 uRes;",
+        "uniform float uTime; uniform float uHFov; uniform float uVFov; uniform float uFlip;",
+        "uniform float uRipple; uniform float uRound;",
+        "uniform float uShape; // 0 dome,1 pizza,2 pill,3 bevel,4 squircle,5 concave,6 flat",
+        "uniform float uStretchX; uniform float uSuperN;",
+        "uniform float uEdgeAmp; uniform float uEdgeWidth;",   // edge pizza crust (along outer edge)
+        "uniform float uProjection;",                          // 0=rect,1=equirect",
+        "uniform float uCamZoom; uniform float uUVMargin;",    // kill edge repetition",
+        "uniform vec3  uBaseColor;",                           // silver tint",
+        "uniform float uEnvMix; uniform float uExposure; uniform float uSaturation;",
+        "uniform float uBlur; uniform float uSharpen;",
+        "uniform float uGlow; uniform float uGlowT;",
+        "uniform float uBlendMode;",                           // 0=mix,1=screen,2=overlay,3=soft",
+        "",
+        "float hash(vec2 p){ return fract(sin(dot(p, vec2(41.3,289.1)))*43758.5453); }",
+        "float noise(vec2 p){ vec2 i=floor(p), f=fract(p); float a=hash(i), b=hash(i+vec2(1.,0.)), c=hash(i+vec2(0.,1.)), d=hash(i+vec2(1.,1.)); vec2 u=f*f*(3.-2.*f); return mix(a,b,u.x)+(c-a)*u.y*(1.-u.x)+(d-b)*u.x*u.y; }",
+        "float fbm(vec2 p){ float s=0., a=0.5; for(int i=0;i<4;i++){ s+=a*noise(p); p*=2.07; a*=0.5; } return s; }",
+        "",
+        "float luma(vec3 c){ return dot(c, vec3(0.2126,0.7152,0.0722)); }",
+        "vec3 applyExposure(vec3 c, float e){ return 1.0 - exp(-c*e); }",
+        "vec3 applySaturation(vec3 c, float sat){ float l = luma(c); return mix(vec3(l), c, sat); }",
+        "vec3 blendScreen(vec3 b, vec3 s){ return 1.0 - (1.0 - b)*(1.0 - s); }",
+        "vec3 blendOverlay(vec3 b, vec3 s){ vec3 lt = step(b, vec3(0.5)); return lt*(2.0*b*s) + (1.0-lt)*(1.0 - 2.0*(1.0-b)*(1.0-s)); }",
+        "vec3 blendSoft(vec3 b, vec3 s){ return mix(b*(1.0 - 2.0*(1.0 - s)) + (2.0*s - 1.0)*(sqrt(b) - b), 2.0*b*s + b*b*(1.0 - 2.0*s), step(0.5, s)); }",
+        "",
+        "// small Gaussian blur (9 taps), used for blur and bloom and sharpening",
+        "vec3 sampleBlur(vec2 uv, float radius){",
+        "  if (radius <= 0.01) return texture2D(uCam, uv).rgb;",
+        "  vec2 texel = 1.0 / uCamSize; vec2 r = radius * texel; vec3 c = vec3(0.0);",
+        "  c += texture2D(uCam, uv).rgb * 0.2270;",
+        "  c += texture2D(uCam, uv + vec2( r.x, 0.0)).rgb * 0.1946;",
+        "  c += texture2D(uCam, uv - vec2( r.x, 0.0)).rgb * 0.1946;",
+        "  c += texture2D(uCam, uv + vec2( 0.0, r.y)).rgb * 0.1946;",
+        "  c += texture2D(uCam, uv - vec2( 0.0, r.y)).rgb * 0.1946;",
+        "  c += texture2D(uCam, uv + vec2( r.x, r.y)).rgb * 0.1216;",
+        "  c += texture2D(uCam, uv + vec2(-r.x, r.y)).rgb * 0.1216;",
+        "  c += texture2D(uCam, uv + vec2( r.x,-r.y)).rgb * 0.1216;",
+        "  c += texture2D(uCam, uv + vec2(-r.x,-r.y)).rgb * 0.1216;",
+        "  return c;",
+        "}",
+        "",
+        "// map reflection vector to webcam UV; clamp to front hemisphere to avoid extrapolation",
+        "vec2 sampleFromWebcam(vec3 R, out float inRange){",
+        "  float PI = 3.141592653589793;",
+        "  R = normalize(R); R.z = max(R.z, 1e-3); // front hemisphere",
+        "  float phi = atan(R.x, R.z);        // [-pi, pi]",
+        "  float theta = asin(clamp(R.y, -1.0, 1.0)); // [-pi/2, pi/2]",
+        "  float phiMax = (uProjection < 0.5) ? (uHFov*0.5) : (0.5*PI);",
+        "  float thMax  = (uProjection < 0.5) ? (uVFov*0.5) : (0.5*PI);",
+        "  float pc = clamp(phi,  -phiMax*0.995,  phiMax*0.995);",
+        "  float tc = clamp(theta,-thMax *0.995,  thMax *0.995);",
+        "  inRange = float(abs(phi)   <= phiMax && abs(theta) <= thMax);",
+        "  float u = (uProjection < 0.5) ? (0.5 + pc / uHFov) : (0.5 + pc / PI);",
+        "  float v = (uProjection < 0.5) ? (0.5 - tc / uVFov) : (0.5 - tc / (0.5*PI));",
+        "  if (uFlip > 0.5) u = 1.0 - u;",
+        "  // center-zoom + margin clamp to avoid edge-repeat",
+        "  float z = max(uCamZoom, 1.0);",
+        "  vec2 uv = vec2(u,v);",
+        "  uv = (uv - 0.5) / z + 0.5;",             // crop/zoom",
+        "  uv = clamp(uv, vec2(uUVMargin), vec2(1.0 - uUVMargin));",
+        "  return uv;",
+        "}",
+        "",
+        "// numerical gradient helper",
+        "float heightAt(vec2 p, float R, float shape){",
+        "  // base dome over unit superellipse/circle footprint",
+        "  float r = length(p);",
+        "  float rr = min(r / R, 0.999);",
+        "  float z = sqrt(1.0 - rr*rr);",
+        "  return z;",
+        "}",
+        "",
+        "// compute normal for multiple shapes; squircle via numerical gradient to avoid 'pyramid'",
+        "vec3 shapeNormal(vec2 uv){",
+        "  float aspect = uRes.x / max(uRes.y, 1.0);",
+        "  vec2 p = (uv - 0.5) * vec2(aspect, 1.0);",
+        "  if (uShape > 5.5) { // flat",
+        "    return vec3(0.0,0.0,1.0);",
+        "  }",
+        "  p.x /= max(0.001, uStretchX); // pill stretch",
+        "",
+        "  // optional squircle warp of domain (n>2 => more square-ish)",
+        "  vec2 pw = p;",
+        "  if (uShape > 3.5 && uShape < 4.5){",
+        "    float n = max(uSuperN, 2.0);",
+        "    pw = sign(p)*pow(abs(p), vec2(2.0/n)); // mild warp only (avoid extreme spikes)",
+        "  }",
+        "  float R = 0.5;",
+        "",
+        "  // pizza rim along outer edge (applied to all 0..5 via slope mod)",
+        "  float r = length(pw);",
+        "  float center = R * (1.0 - uEdgeWidth*0.5);",
+        "  float gEdge   = exp(-pow((r - center), 2.0) / max(1e-5, uEdgeWidth*uEdgeWidth));",
+        "  float dEdge   = uEdgeAmp * gEdge * (-2.0*(r - center)/max(1e-5, uEdgeWidth*uEdgeWidth));",
+        "",
+        "  // base dome slope",
+        "  float rr = min(r / R, 0.999);",
+        "  float zbase = sqrt(1.0 - rr*rr);",
+        "  float dzdr  = -r / (R*R * max(zbase, 1e-4));",
+        "",
+        "  // legacy inner pizza (shape==1) still available but subtle",
+        "  if (uShape > 0.5 && uShape < 1.5){",
+        "    float pos = 0.44; float w=0.07; float amp=0.12;",
+        "    float g = exp(-pow((r - pos), 2.0)/(w*w));",
+        "    dzdr += amp * g * (-2.0*(r - pos)/(w*w));",
+        "  }",
+        "  // bevel steepness (3)",
+        "  if (uShape > 2.5 && uShape < 3.5){",
+        "    float t = smoothstep(0.35, 0.50, r);",
+        "    dzdr += mix(0.0, -6.0*(r-0.5), t);",
+        "  }",
+        "  // concave center (5)",
+        "  if (uShape > 4.5 && uShape < 5.5){",
+        "    float cAmp = 0.28; float cW = 0.28;",
+        "    float g0 = exp(-(r*r)/(cW*cW));",
+        "    dzdr += cAmp * g0 * (-2.0*r/(cW*cW));",
+        "  }",
+        "",
+        "  dzdr += dEdge; // add outer crust",
+        "",
+        "  vec2 dir = (r>1e-5) ? (pw/r) : vec2(0.0);",
+        "  vec3 N = normalize(vec3(-dzdr*dir.x, -dzdr*dir.y, 1.0));",
+        "  // gentle ripple",
+        "  if (uRipple > 0.001){",
+        "    float rp = fbm(uv * uRes.xy * 0.006 + vec2(0.0, uTime*0.2));",
+        "    N.xy += (rp - 0.5) * (uRipple * 0.5);",
+        "    N = normalize(N);",
+        "  }",
+        "  // roundness blend",
+        "  N = normalize(mix(vec3(0.0,0.0,1.0), N, clamp(uRound,0.0,1.0)));",
+        "  return N;",
+        "}",
+        "",
+        "void main(){",
+        "  vec3 V = vec3(0.0, 0.0, 1.0);",
+        "  vec3 N = shapeNormal(vUv);",
+        "  vec3 R = reflect(-V, N); R.z = max(R.z, 1e-3);",
+        "  float inRange = 1.0;",
+        "  vec2 camUV = sampleFromWebcam(R, inRange);",
+        "",
+        "  // source, blur, sharpen",
+        "  vec3 envRaw = texture2D(uCam, camUV).rgb;",
+        "  vec3 envB   = sampleBlur(camUV, uBlur);",
+        "  float shR = max(0.5, uBlur*0.6);",
+        "  vec3 envSmall = sampleBlur(camUV, shR);",
+        "  vec3 envSharpen = clamp(envRaw + uSharpen * (envRaw - envSmall), 0.0, 1.0);",
+        "  vec3 envMixBlur = mix(envSharpen, envB, smoothstep(0.0,1.3,uBlur));",
+        "  envMixBlur = applyExposure(envMixBlur, uExposure);",
+        "  envMixBlur = applySaturation(envMixBlur, uSaturation);",
+        "",
+        "  // fall back to base if outside valid hemisphere (no extrapolated edges)",
+        "  envMixBlur = mix(uBaseColor, envMixBlur, inRange);",
+        "",
+        "  float NdV = clamp(dot(N, V), 0.0, 1.0);",
+        "  float F0 = 0.92; // metallic-ish silver",
+        "  float F  = F0 + (1.0 - F0) * pow(1.0 - NdV, 5.0);",
+        "  vec3 base = uBaseColor;                // bright neutral",
+        "  vec3 refl = envMixBlur * (uEnvMix * F);",
+        "  vec3 col;",
+        "  if (uBlendMode < 0.5)      col = mix(base, base + refl, uEnvMix);",
+        "  else if (uBlendMode < 1.5) col = blendScreen(base, refl);",
+        "  else if (uBlendMode < 2.5) col = blendOverlay(base, refl);",
+        "  else                       col = blendSoft(base, refl);",
+        "",
+        "  // subtle geometric sheen",
+        "  float sheen = pow(1.0 - length((vUv - 0.5) * 2.0), 22.0) * 0.28;",
+        "  col += sheen;",
+        "",
+        "  // glow/bloom from bright env (and fresnel edge)",
+        "  float bright = max(max(envMixBlur.r, envMixBlur.g), envMixBlur.b);",
+        "  float glowMask = max(0.0, bright - uGlowT) + pow(1.0 - NdV, 4.0)*0.25;",
+        "  vec3 glowCol = sampleBlur(camUV, 3.0) * glowMask * uGlow;",
+        "  col += glowCol;",
+        "",
+        "  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);",
+        "}"
+      ].join("\n");
+
+      const vs = compile(gl.VERTEX_SHADER, vsSrc);
+      const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
+      const prog = gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      gl.useProgram(prog);
+
+      const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ -1,-1, 1,-1, -1,1,  -1,1, 1,-1, 1,1 ]), gl.STATIC_DRAW);
+      const aPos = gl.getAttribLocation(prog,'aPos'); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+
+      const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+      function U(n){ return gl.getUniformLocation(prog, n); }
+      const uniforms = {
+        uCam:U('uCam'), uCamSize:U('uCamSize'), uRes:U('uRes'), uTime:U('uTime'),
+        uHFov:U('uHFov'), uVFov:U('uVFov'), uFlip:U('uFlip'),
+        uRipple:U('uRipple'), uRound:U('uRound'),
+        uShape:U('uShape'), uStretchX:U('uStretchX'), uSuperN:U('uSuperN'),
+        uEdgeAmp:U('uEdgeAmp'), uEdgeWidth:U('uEdgeWidth'),
+        uProjection:U('uProjection'), uCamZoom:U('uCamZoom'), uUVMargin:U('uUVMargin'),
+        uBaseColor:U('uBaseColor'),
+        uEnvMix:U('uEnvMix'), uExposure:U('uExposure'), uSaturation:U('uSaturation'),
+        uBlur:U('uBlur'), uSharpen:U('uSharpen'),
+        uGlow:U('uGlow'), uGlowT:U('uGlowT'),
+        uBlendMode:U('uBlendMode')
+      };
+      return { gl, prog, tex, uniforms };
+    };
+  }
+  const makeGL = window.EnvMirror.makeGL;
+
+  /* EnvButtons */
+  if (!window.EnvButtons) {
+    window.EnvButtons = (function(){
+      const instances = new Map();
+      function hfovToVfov(hfov, aspect){ return 2*Math.atan(Math.tan(hfov/2)/aspect); }
+      function shapeCode(name){
+        if(name==='pizza') return 1.0;
+        if(name==='pill') return 2.0;
+        if(name==='bevel') return 3.0;
+        if(name==='squircle') return 4.0;
+        if(name==='concave') return 5.0;
+        if(name==='flat') return 6.0;
+        return 0.0;
+      }
+      function stretchFor(name){ return name==='pill' ? 1.8 : 1.0; }
+      function blendCode(s){ return s==='screen'?1.0 : s==='overlay'?2.0 : s==='soft'?3.0 : 0.0; }
+
+      function parseHex(hex, fallback){
+        const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");
+        if(!m) return fallback||[0.82,0.84,0.87];
+        return [ parseInt(m[1],16)/255, parseInt(m[2],16)/255, parseInt(m[3],16)/255 ];
+      }
+
+      function create(host, opts){
+        const options = Object.assign({
+          hfovDeg:100, projection:'rect', ripple:0.12, flip:true, roundHint:0.72,
+          base:[0.82,0.84,0.87], envMix:0.55, exposure:1.55, saturation:1.0,
+          blur:1.2, sharpen:0.45, glow:0.35, glowT:0.65,
+          edgeAmp:0.35, edgeWidth:0.08,
+          camZoom:1.15, uvMargin:0.04,
+          blend:'screen', superN:3.0
+        }, opts||{});
+        const dataBase = host.getAttribute('data-base');
+        if (dataBase) options.base = parseHex(dataBase, options.base);
+
+        let canvas = host.querySelector('canvas'); if(!canvas){ canvas = document.createElement('canvas'); host.appendChild(canvas); }
+        let overlay = host.querySelector('.overlay'); if(!overlay){ overlay = document.createElement('canvas'); overlay.className='overlay'; host.appendChild(overlay); }
+
+        const glx = makeGL(canvas); const gl = glx.gl;
+        const dpr = Math.max(1, window.devicePixelRatio||1);
+        function resize(){
+          const r = host.getBoundingClientRect();
+          const W = Math.max(1,(r.width*dpr)|0), H = Math.max(1,(r.height*dpr)|0);
+          if(canvas.width!==W||canvas.height!==H){ canvas.width=W; canvas.height=H; gl.viewport(0,0,W,H); }
+        }
+        const ro = new ResizeObserver(resize); ro.observe(host); resize();
+
+        const t0 = performance.now();
+        const shapeName = host.getAttribute('data-shape') || 'dome';
+
+        function frame(now){
+          const v = Camera.state.video; if(!v){ requestAnimationFrame(frame); return; }
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, glx.tex);
+          try{ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,v); }catch(e){}
+
+          const r = host.getBoundingClientRect();
+          gl.uniform2f(glx.uniforms.uRes, r.width, r.height);
+          gl.uniform1i(glx.uniforms.uCam, 0);
+          gl.uniform2f(glx.uniforms.uCamSize, v.videoWidth||640, v.videoHeight||480);
+
+          const hf = options.hfovDeg*Math.PI/180;
+          const vf = hfovToVfov(hf, (v.videoWidth||16)/(v.videoHeight||9));
+          gl.uniform1f(glx.uniforms.uHFov, hf);
+          gl.uniform1f(glx.uniforms.uVFov, vf);
+          gl.uniform1f(glx.uniforms.uFlip, options.flip?1.0:0.0);
+
+          gl.uniform1f(glx.uniforms.uRipple, options.ripple);
+          gl.uniform1f(glx.uniforms.uRound, options.roundHint);
+          gl.uniform1f(glx.uniforms.uShape, shapeCode(shapeName));
+          gl.uniform1f(glx.uniforms.uStretchX, stretchFor(shapeName));
+          gl.uniform1f(glx.uniforms.uSuperN, options.superN);
+
+          gl.uniform1f(glx.uniforms.uEdgeAmp, options.edgeAmp);
+          gl.uniform1f(glx.uniforms.uEdgeWidth, options.edgeWidth);
+
+          gl.uniform1f(glx.uniforms.uProjection, options.projection==='rect'? 0.0 : 1.0);
+          gl.uniform1f(glx.uniforms.uCamZoom, options.camZoom);
+          gl.uniform1f(glx.uniforms.uUVMargin, options.uvMargin);
+
+          gl.uniform3f(glx.uniforms.uBaseColor, options.base[0], options.base[1], options.base[2]);
+          gl.uniform1f(glx.uniforms.uEnvMix, options.envMix);
+          gl.uniform1f(glx.uniforms.uExposure, options.exposure);
+          gl.uniform1f(glx.uniforms.uSaturation, options.saturation);
+          gl.uniform1f(glx.uniforms.uBlur, options.blur);
+          gl.uniform1f(glx.uniforms.uSharpen, options.sharpen);
+          gl.uniform1f(glx.uniforms.uGlow, options.glow);
+          gl.uniform1f(glx.uniforms.uGlowT, options.glowT);
+          gl.uniform1f(glx.uniforms.uBlendMode, blendCode(options.blend));
+
+          gl.uniform1f(glx.uniforms.uTime, (now - t0)/1000);
+          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+
+        instances.set(host, { host, canvas, overlay, glx, options });
+        return instances.get(host);
+      }
+
+      async function applyTo(selector, options){
+        selector = selector || '.env-ui';
+        await Camera.ensure();
+        const nodes = document.querySelectorAll(selector);
+        for (let i=0;i<nodes.length;i++){ const el = nodes[i]; if(!el.__envBtn){ el.__envBtn = create(el, options); } }
+      }
+      function setAllOptions(patch){ instances.forEach(inst => Object.assign(inst.options, patch||{})); }
+
+      return { applyTo, instances, setAllOptions };
+    })();
+  }
+
+  /* UI wiring */
+  document.addEventListener('DOMContentLoaded', async function(){
+    await window.EnvButtons.applyTo('.env-ui', {}); // defaults are silverish
+
+    function $(id){ return document.getElementById(id); }
+    const hfov=$('hfov'), hfovVal=$('hfovVal');
+    const ripple=$('ripple'), rippleVal=$('rippleVal');
+    const envMix=$('envMix'), envMixVal=$('envMixVal');
+    const camZoom=$('camZoom'), zoomVal=$('zoomVal');
+    const blend=$('blend'), projection=$('projection');
+    const exposure=$('exposure'), expVal=$('expVal');
+    const saturation=$('saturation'), satVal=$('satVal');
+    const sharpen=$('sharpen'), sharpVal=$('sharpVal');
+    const glow=$('glow'), glowVal=$('glowVal');
+    const glowT=$('glowT'), glowTVal=$('glowTVal');
+    const edgeAmp=$('edgeAmp'), edgeAmpVal=$('edgeAmpVal');
+    const edgeW=$('edgeW'), edgeWVal=$('edgeWVal');
+    const flipBtn=$('flip');
+    const presetSilver=$('presetSilver');
+    const presetChrome=$('presetChrome');
+
+    hfov.addEventListener('input', ()=>{ const v=+hfov.value; hfovVal.textContent=v+'°'; EnvButtons.setAllOptions({ hfovDeg:v }); });
+    ripple.addEventListener('input', ()=>{ const v=+ripple.value; rippleVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ ripple:v }); });
+    envMix.addEventListener('input', ()=>{ const v=+envMix.value; envMixVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ envMix:v }); });
+    camZoom.addEventListener('input', ()=>{ const v=+camZoom.value; zoomVal.textContent=v.toFixed(2)+'×'; EnvButtons.setAllOptions({ camZoom:v }); });
+
+    blend.addEventListener('change', ()=>{ EnvButtons.setAllOptions({ blend: blend.value }); });
+    projection.addEventListener('change', ()=>{ EnvButtons.setAllOptions({ projection: projection.value==='equirect'?'equirect':'rect' }); });
+
+    exposure.addEventListener('input', ()=>{ const v=+exposure.value; expVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ exposure:v }); });
+    saturation.addEventListener('input', ()=>{ const v=+saturation.value; satVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ saturation:v }); });
+
+    sharpen.addEventListener('input', ()=>{ const v=+sharpen.value; sharpVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ sharpen:v }); });
+    glow.addEventListener('input', ()=>{ const v=+glow.value; glowVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ glow:v }); });
+    glowT.addEventListener('input', ()=>{ const v=+glowT.value; glowTVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ glowT:v }); });
+
+    edgeAmp.addEventListener('input', ()=>{ const v=+edgeAmp.value; edgeAmpVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ edgeAmp:v }); });
+    edgeW.addEventListener('input', ()=>{ const v=+edgeW.value; edgeWVal.textContent=v.toFixed(2); EnvButtons.setAllOptions({ edgeWidth:v }); });
+
+    flipBtn.addEventListener('click', ()=>{ EnvButtons.instances.forEach(inst => inst.options.flip = !inst.options.flip); });
+
+    // Presets
+    presetSilver.addEventListener('click', ()=>{
+      EnvButtons.setAllOptions({
+        base:[0.82,0.84,0.87], envMix:0.55, blend:'screen', exposure:1.55, saturation:1.0,
+        blur:1.2, sharpen:0.45, glow:0.35, glowT:0.65, camZoom:1.15
+      });
+    });
+    presetChrome.addEventListener('click', ()=>{
+      EnvButtons.setAllOptions({
+        base:[0.90,0.92,0.95], envMix:0.70, blend:'screen', exposure:1.7, saturation:0.9,
+        blur:0.8, sharpen:0.65, glow:0.6, glowT:0.6, camZoom:1.2
+      });
+    });
+  });
+})();
+</script>
+</body>
+</html>
