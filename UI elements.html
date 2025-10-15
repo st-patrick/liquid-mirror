@@ -3,442 +3,366 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Liquid Mirror — True Rounded-Rect Rim (Flat Center)</title>
+<title>Mirror Debug — Reference Stages + Flat Center / Rim Bend</title>
 <style>
   :root { --bg:#0e0f12; --card:#16181d; --fg:#e6e9ef; --muted:#9aa3b2; }
   html, body { height:100%; }
-  body {
-    margin:0; font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-    background:radial-gradient(80% 100% at 50% 0%, #13151a, #0b0c0f 70%); color:var(--fg);
-    display:grid; place-items:center; padding:32px;
-  }
-  .wrap { display:grid; gap:24px; grid-template-columns: minmax(320px,440px) 1fr; width:min(1200px, 94vw); align-items:start; }
-  .card { background:var(--card); border:1px solid #23262d; border-radius:16px; padding:16px; box-shadow:0 10px 30px rgba(0,0,0,.25) inset, 0 10px 40px rgba(0,0,0,.4); }
-  .controls { display:grid; gap:12px; }
-  .row { display:grid; gap:10px; }
-  .row.cols-2 { grid-template-columns: 1fr 1fr; }
-  .row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
-  label { display:grid; gap:6px; font-weight:600; }
-  input[type="range"], select, input[type="color"] { width:100%; }
-  .btn { display:inline-flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid #272a31; background:#15171b; color:#e6ebf3; cursor:pointer; }
-  .btn:hover { background:#1a1d22; }
-  .chip{ background:#111317; padding:6px 10px; border-radius:10px; border:1px solid #2a2f37; color:#aeb6c6; }
-  .grid { display:grid; grid-template-columns:repeat(2, minmax(240px, 1fr)); gap:18px; align-items:start; }
-  .grid .wide { grid-column: span 2; }
-  .env-ui { position:relative; background:transparent; aspect-ratio: 2.2/1; }
-  .env-ui > canvas { position:absolute; inset:0; width:100%; height:100%; display:block; }
-  .ui-label { margin-top:8px; color:#aeb6c6; font-weight:600; font-size:12px; text-align:center; }
+  body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+       background:radial-gradient(80% 100% at 50% 0%, #13151a, #0b0c0f 70%);color:var(--fg);
+       display:grid;place-items:center;padding:28px}
+  .wrap{display:grid;gap:22px;grid-template-columns:minmax(320px,440px) 1fr;width:min(1200px,94vw);align-items:start}
+  .card{background:#16181d;border:1px solid #23262d;border-radius:16px;padding:16px;box-shadow:0 10px 30px rgba(0,0,0,.25) inset,0 10px 40px rgba(0,0,0,.4)}
+  .controls{display:grid;gap:12px}
+  .row{display:grid;gap:10px}
+  .row.cols-2{grid-template-columns:1fr 1fr}.row.cols-3{grid-template-columns:1fr 1fr 1fr}
+  label{display:grid;gap:6px;font-weight:600}
+  input[type="range"],select,input[type="color"]{width:100%}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid #272a31;background:#15171b;color:#e6ebf3;cursor:pointer}
+  .btn:hover{background:#1a1d22}
+  .chip{background:#111317;padding:6px 10px;border-radius:10px;border:1px solid #2a2f37;color:#aeb6c6}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(240px,1fr));gap:18px;align-items:start}
+  .grid .wide{grid-column:span 2}
+  .env{position:relative;background:transparent;aspect-ratio:2.2/1}
+  .env>canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .ui-label{margin-top:8px;color:#aeb6c6;font-weight:600;font-size:12px;text-align:center}
+  .rail{display:grid;grid-template-columns:repeat(4,minmax(160px,1fr));gap:12px}
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h2 style="margin:4px 0 8px;">Rounded-Rect Rim (flat center) — Silvery Material</h2>
-      <p class="muted">Center is a true plane (exact webcam reflection). Rim is the border. No interior warping. Ripples are off by default.</p>
+<div class="wrap">
+  <div class="card">
+    <h2 style="margin:4px 0 8px;">Mirror Debug — step-by-step</h2>
+    <p class="muted">Left to right: Raw mirror → Post only → Material (flat) → Full (flat center + beveled rim).</p>
 
-      <div class="controls">
-        <div class="row cols-2">
-          <label>Projection
-            <select id="projection">
-              <option value="rect">Rectilinear</option>
-              <option value="equirect">Equirectangular</option>
-            </select>
-          </label>
-          <label>HFOV
-            <input id="hfov" type="range" min="40" max="180" step="1" value="100">
-            <div class="chip" id="hfovVal">100°</div>
-          </label>
-        </div>
-
-        <div class="row cols-3">
-          <label>Corner radius
-            <input id="corner" type="range" min="0.00" max="0.45" step="0.01" value="0.22">
-            <div class="chip" id="cornerVal">0.22</div>
-          </label>
-          <label>Rim width
-            <input id="edgeW" type="range" min="0.02" max="0.20" step="0.005" value="0.08">
-            <div class="chip" id="edgeWVal">0.08</div>
-          </label>
-          <label>Rim amp
-            <input id="edgeAmp" type="range" min="0.00" max="1.00" step="0.01" value="0.30">
-            <div class="chip" id="edgeAmpVal">0.30</div>
-          </label>
-        </div>
-
-        <div class="row cols-3">
-          <label>Rim hardness
-            <input id="edgeHard" type="range" min="0.50" max="3.00" step="0.05" value="1.20">
-            <div class="chip" id="edgeHardVal">1.20</div>
-          </label>
-          <label>Normal soften
-            <input id="round" type="range" min="0.00" max="1.00" step="0.02" value="0.70">
-            <div class="chip" id="roundVal">0.70</div>
-          </label>
-          <label>Ripples
-            <input id="ripple" type="range" min="0.00" max="1.00" step="0.01" value="0.00">
-            <div class="chip" id="rippleVal">0.00</div>
-          </label>
-        </div>
-
-        <div class="row cols-3">
-          <label>Highlight boost
-            <input id="hiboost" type="range" min="0.00" max="1.20" step="0.02" value="0.40">
-            <div class="chip" id="hiboostVal">0.40</div>
-          </label>
-          <label>Hi threshold
-            <input id="hithresh" type="range" min="0.40" max="0.90" step="0.02" value="0.62">
-            <div class="chip" id="hithreshVal">0.62</div>
-          </label>
-          <label>Env mix
-            <input id="envMix" type="range" min="0.00" max="1.00" step="0.01" value="0.48">
-            <div class="chip" id="envMixVal">0.48</div>
-          </label>
-        </div>
-
-        <div class="row cols-3">
-          <label>Exposure
-            <input id="exposure" type="range" min="0.60" max="2.50" step="0.05" value="1.30">
-            <div class="chip" id="expVal">1.30</div>
-          </label>
-          <label>Sharpen
-            <input id="sharpen" type="range" min="0.00" max="1.20" step="0.02" value="0.50">
-            <div class="chip" id="sharpVal">0.50</div>
-          </label>
-          <label>Blur
-            <input id="blur" type="range" min="0.00" max="2.50" step="0.05" value="1.00">
-            <div class="chip" id="blurVal">1.00</div>
-          </label>
-        </div>
-
-        <div class="row cols-3">
-          <label>Glow
-            <input id="glow" type="range" min="0.00" max="2.00" step="0.05" value="0.40">
-            <div class="chip" id="glowVal">0.40</div>
-          </label>
-          <label>Glow thresh
-            <input id="glowT" type="range" min="0.40" max="0.95" step="0.01" value="0.62">
-            <div class="chip" id="glowTVal">0.62</div>
-          </label>
-          <label>Blend mode
-            <select id="blend">
-              <option value="screen">Screen</option>
-              <option value="overlay">Overlay</option>
-              <option value="soft">Soft Light</option>
-              <option value="mix">Linear Mix</option>
-            </select>
-          </label>
-        </div>
-
-        <div class="row cols-3">
-          <label>Cam zoom
-            <input id="camZoom" type="range" min="1.00" max="1.80" step="0.01" value="1.18">
-            <div class="chip" id="zoomVal">1.18×</div>
-          </label>
-          <label>UV margin
-            <input id="uvMargin" type="range" min="0.00" max="0.10" step="0.002" value="0.04">
-            <div class="chip" id="uvMarginVal">0.04</div>
-          </label>
-          <label>Base color
-            <input id="baseColor" type="color" value="#d0d4da">
-          </label>
-        </div>
-
-        <div class="row cols-2">
-          <button class="btn" id="flip">Flip webcam</button>
-          <button class="btn" id="reset">Reset params</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="grid">
-      <!-- True rounded-rect: border == rim; outside is transparent -->
-      <div>
-        <div class="env-ui wide" data-shape="roundrect" data-corner="0.22" data-base="#d0d4da"></div>
-        <div class="ui-label">Rounded-rect (flat center, beveled rim)</div>
+    <div class="controls">
+      <div class="row cols-2">
+        <label>Projection
+          <select id="projection"><option value="rect">Rectilinear</option><option value="equirect">Equirectangular</option></select>
+        </label>
+        <label>HFOV
+          <input id="hfov" type="range" min="40" max="180" step="1" value="100"><div class="chip" id="hfovVal">100°</div>
+        </label>
       </div>
 
-      <!-- Reference flat material: same filters, no geometry -->
-      <div>
-        <div class="env-ui" data-shape="flat" data-base="#d0d4da" style="aspect-ratio:2.2/1;"></div>
-        <div class="ui-label">Flat material reference</div>
+      <div class="row cols-3">
+        <label>Corner radius
+          <input id="corner" type="range" min="0.00" max="0.45" step="0.01" value="0.22"><div class="chip" id="cornerVal">0.22</div>
+        </label>
+        <label>Rim width
+          <input id="edgeW" type="range" min="0.02" max="0.20" step="0.005" value="0.08"><div class="chip" id="edgeWVal">0.08</div>
+        </label>
+        <label>Rim bend amp
+          <input id="edgeAmp" type="range" min="0.00" max="1.00" step="0.01" value="0.30"><div class="chip" id="edgeAmpVal">0.30</div>
+        </label>
       </div>
 
-      <!-- Optional: pill & squircle remain for variety -->
-      <div>
-        <div class="env-ui" data-shape="pill" data-base="#d0d4da" style="aspect-ratio: 2.7/1;"></div>
-        <div class="ui-label">Pill (legacy)</div>
+      <div class="row cols-3">
+        <label>Rim hardness
+          <input id="edgeHard" type="range" min="0.50" max="3.00" step="0.05" value="1.20"><div class="chip" id="edgeHardVal">1.20</div>
+        </label>
+        <label>Rim mapping (env in rim)
+          <input id="rimMix" type="range" min="0.00" max="1.00" step="0.01" value="1.00"><div class="chip" id="rimMixVal">1.00</div>
+        </label>
+        <label>Normal soften
+          <input id="round" type="range" min="0.00" max="1.00" step="0.02" value="0.70"><div class="chip" id="roundVal">0.70</div>
+        </label>
       </div>
-      <div>
-        <div class="env-ui" data-shape="squircle" data-base="#d0d4da" style="aspect-ratio:1.4/1;"></div>
-        <div class="ui-label">Squircle (legacy)</div>
+
+      <div class="row cols-3">
+        <label>Exposure
+          <input id="exposure" type="range" min="0.60" max="2.50" step="0.05" value="1.20"><div class="chip" id="expVal">1.20</div>
+        </label>
+        <label>Sharpen
+          <input id="sharpen" type="range" min="0.00" max="1.20" step="0.02" value="0.40"><div class="chip" id="sharpVal">0.40</div>
+        </label>
+        <label>Blur
+          <input id="blur" type="range" min="0.00" max="2.50" step="0.05" value="0.80"><div class="chip" id="blurVal">0.80</div>
+        </label>
+      </div>
+
+      <div class="row cols-3">
+        <label>Glow
+          <input id="glow" type="range" min="0.00" max="2.00" step="0.05" value="0.30"><div class="chip" id="glowVal">0.30</div>
+        </label>
+        <label>Glow thresh
+          <input id="glowT" type="range" min="0.40" max="0.95" step="0.01" value="0.62"><div class="chip" id="glowTVal">0.62</div>
+        </label>
+        <label>Blend mode
+          <select id="blend"><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft">Soft Light</option><option value="mix">Linear Mix</option></select>
+        </label>
+      </div>
+
+      <div class="row cols-3">
+        <label>Env mix
+          <input id="envMix" type="range" min="0.00" max="1.00" step="0.01" value="0.48"><div class="chip" id="envMixVal">0.48</div>
+        </label>
+        <label>Highlight boost
+          <input id="hiboost" type="range" min="0.00" max="1.20" step="0.02" value="0.35"><div class="chip" id="hiboostVal">0.35</div>
+        </label>
+        <label>Hi threshold
+          <input id="hithresh" type="range" min="0.40" max="0.90" step="0.02" value="0.60"><div class="chip" id="hithreshVal">0.60</div>
+        </label>
+      </div>
+
+      <div class="row cols-3">
+        <label>Cam zoom
+          <input id="camZoom" type="range" min="1.00" max="1.90" step="0.01" value="1.20"><div class="chip" id="zoomVal">1.20×</div>
+        </label>
+        <label>UV margin
+          <input id="uvMargin" type="range" min="0.00" max="0.10" step="0.002" value="0.04"><div class="chip" id="uvMarginVal">0.040</div>
+        </label>
+        <label>Base color
+          <input id="baseColor" type="color" value="#cfd3d9">
+        </label>
+      </div>
+
+      <div class="row cols-2">
+        <button class="btn" id="flip">Flip webcam</button>
+        <button class="btn" id="reset">Reset</button>
       </div>
     </div>
   </div>
 
+  <div>
+    <div class="rail">
+      <div><div class="env" data-stage="0"></div><div class="ui-label">A — Raw mirror (direct video)</div></div>
+      <div><div class="env" data-stage="1"></div><div class="ui-label">B — Post only</div></div>
+      <div><div class="env" data-stage="2"></div><div class="ui-label">C — Material (flat)</div></div>
+      <div><div class="env" data-stage="3" data-shape="roundrect" style="aspect-ratio:2.2/1"></div><div class="ui-label">D — Full (flat center + rim)</div></div>
+    </div>
+
+    <div class="grid" style="margin-top:16px">
+      <div class="env wide" data-stage="3" data-shape="roundrect"></div>
+      <div class="ui-label">Large rounded-rect (center uses direct mirror, rim bends & reflects env)</div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
-  if (!window.EnvMirror) window.EnvMirror = {};
-
+  if(!window.EnvMirror) window.EnvMirror = {};
   /* Camera */
-  if (!window.EnvMirror.Camera) {
-    const CS = { stream:null, video:null, ready:false, flip:true };
+  if(!window.EnvMirror.Camera){
+    const CS={stream:null,video:null,ready:false,flip:true};
     async function ensureCamera(){
-      if (CS.ready && CS.video && !CS.video.paused) return CS;
-      const stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false });
-      const v = document.createElement("video");
-      v.autoplay = true; v.playsInline = true; v.muted = true; v.srcObject = stream; await v.play();
-      CS.stream = stream; CS.video = v; CS.ready = true; return CS;
+      if(CS.ready && CS.video && !CS.video.paused) return CS;
+      const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});
+      const v=document.createElement("video");
+      v.autoplay=true; v.playsInline=true; v.muted=true; v.srcObject=stream; await v.play();
+      CS.stream=stream; CS.video=v; CS.ready=true; return CS;
     }
-    window.EnvMirror.Camera = { ensure: ensureCamera, state: CS };
+    window.EnvMirror.Camera={ensure:ensureCamera,state:CS};
   }
-  const Camera = window.EnvMirror.Camera;
+  const Camera=window.EnvMirror.Camera;
 
-  /* WebGL factory */
-  if (!window.EnvMirror.makeGL) {
-    window.EnvMirror.makeGL = function(canvas){
-      const gl = canvas.getContext("webgl", { alpha:true, antialias:true, premultipliedAlpha:true });
+  /* GL */
+  if(!window.EnvMirror.makeGL){
+    window.EnvMirror.makeGL=function(canvas){
+      const gl=canvas.getContext("webgl",{alpha:true,antialias:true,premultipliedAlpha:true});
       if(!gl) throw new Error("WebGL not available");
-
-      function compile(type, src){
-        const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
-        if(!gl.getShaderParameter(s, gl.COMPILE_STATUS)){
-          const info = gl.getShaderInfoLog(s)||"compile error";
-          console.error("Shader compile error:\n", info, "\nSource:\n", src);
-          throw new Error(info);
-        }
-        return s;
-      }
-
-      const vsSrc = [
+      function compile(type,src){const s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+        if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const info=gl.getShaderInfoLog(s)||"compile error";
+          console.error("Shader compile error:\n",info,"\nSource:\n",src); throw new Error(info);} return s; }
+      const vsSrc=[
         "attribute vec2 aPos;",
         "varying vec2 vUv;",
-        "void main(){ vUv = aPos*0.5 + 0.5; gl_Position = vec4(aPos,0.,1.); }"
+        "void main(){ vUv=aPos*0.5+0.5; gl_Position=vec4(aPos,0.,1.); }"
       ].join("\n");
 
-      const fsSrc = [
+      const fsSrc=[
         "precision mediump float;",
         "varying vec2 vUv;",
         "uniform sampler2D uCam; uniform vec2 uCamSize; uniform vec2 uRes;",
         "uniform float uTime; uniform float uHFov; uniform float uVFov; uniform float uFlip;",
         "uniform float uProjection; uniform float uCamZoom; uniform float uUVMargin;",
-        "uniform float uRipple; uniform float uRound;",
-        "uniform float uShape; // 6 flat, 7 roundrect (others legacy)",
-        "uniform float uCorner; // 0..0.5",
-        "uniform float uEdgeAmp; uniform float uEdgeWidth; uniform float uEdgeHard;",
+        "uniform float uRound; uniform float uStage; // 0..3 per tile",
+        "uniform float uRimMix;",                   // how much env mapping in rim
+        "uniform float uCorner; uniform float uEdgeAmp; uniform float uEdgeWidth; uniform float uEdgeHard;",
         "uniform vec3  uBaseColor; uniform float uEnvMix; uniform float uExposure; uniform float uSaturation;",
         "uniform float uBlur; uniform float uSharpen; uniform float uGlow; uniform float uGlowT;",
-        "uniform float uBlendMode; // 0 mix,1 screen,2 overlay,3 soft",
-        "uniform float uHiBoost; uniform float uHiThresh;",
+        "uniform float uBlendMode; uniform float uHiBoost; uniform float uHiThresh;",
         "",
         "float luma(vec3 c){ return dot(c, vec3(0.2126,0.7152,0.0722)); }",
-        "vec3 applyExposure(vec3 c, float e){ return 1.0 - exp(-c*e); }",
-        "vec3 applySaturation(vec3 c, float sat){ float l=luma(c); return mix(vec3(l),c,sat); }",
-        "vec3 blendScreen(vec3 b, vec3 s){ return 1.0 - (1.0-b)*(1.0-s); }",
-        "vec3 blendOverlay(vec3 b, vec3 s){ vec3 lt=step(b,vec3(0.5)); return lt*(2.0*b*s)+(1.0-lt)*(1.0-2.0*(1.0-b)*(1.0-s)); }",
-        "vec3 blendSoft(vec3 b, vec3 s){ return mix(b*(1.0-2.0*(1.0-s))+(2.0*s-1.0)*(sqrt(b)-b), 2.0*b*s + b*b*(1.0-2.0*s), step(0.5,s)); }",
+        "vec3 applyExposure(vec3 c,float e){ return 1.0 - exp(-c*e); }",
+        "vec3 applySaturation(vec3 c,float s){ float L=luma(c); return mix(vec3(L),c,s); }",
+        "vec3 screen(vec3 b,vec3 s){ return 1.0-(1.0-b)*(1.0-s); }",
+        "vec3 overlay(vec3 b,vec3 s){ vec3 lt=step(b,vec3(0.5)); return lt*(2.0*b*s)+(1.0-lt)*(1.0-2.0*(1.0-b)*(1.0-s)); }",
+        "vec3 soft(vec3 b,vec3 s){ return mix(b*(1.0-2.0*(1.0-s))+(2.0*s-1.0)*(sqrt(b)-b), 2.0*b*s+b*b*(1.0-2.0*s), step(0.5,s)); }",
+        "vec3 blur9(vec2 uv,float r){ if(r<=0.01) return texture2D(uCam,uv).rgb; vec2 t=1.0/uCamSize, R=r*t; vec3 c=vec3(0.0);",
+        "  c+=texture2D(uCam,uv).rgb*0.227;",
+        "  c+=texture2D(uCam,uv+vec2( R.x,0)).rgb*0.195; c+=texture2D(uCam,uv-vec2( R.x,0)).rgb*0.195;",
+        "  c+=texture2D(uCam,uv+vec2(0, R.y)).rgb*0.195; c+=texture2D(uCam,uv-vec2(0, R.y)).rgb*0.195;",
+        "  c+=texture2D(uCam,uv+vec2( R.x, R.y)).rgb*0.122; c+=texture2D(uCam,uv+vec2(-R.x, R.y)).rgb*0.122;",
+        "  c+=texture2D(uCam,uv+vec2( R.x,-R.y)).rgb*0.122; c+=texture2D(uCam,uv+vec2(-R.x,-R.y)).rgb*0.122; return c; }",
         "",
-        "vec3 sampleBlur9(vec2 uv, float r){",
-        "  if(r<=0.01) return texture2D(uCam, uv).rgb;",
-        "  vec2 t=1.0/uCamSize, R=r*t; vec3 c=vec3(0.0);",
-        "  c+=texture2D(uCam, uv).rgb*0.2270;",
-        "  c+=texture2D(uCam, uv+vec2( R.x,0)).rgb*0.1946; c+=texture2D(uCam, uv-vec2( R.x,0)).rgb*0.1946;",
-        "  c+=texture2D(uCam, uv+vec2(0, R.y)).rgb*0.1946; c+=texture2D(uCam, uv-vec2(0, R.y)).rgb*0.1946;",
-        "  c+=texture2D(uCam, uv+vec2( R.x, R.y)).rgb*0.1216; c+=texture2D(uCam, uv+vec2(-R.x, R.y)).rgb*0.1216;",
-        "  c+=texture2D(uCam, uv+vec2( R.x,-R.y)).rgb*0.1216; c+=texture2D(uCam, uv+vec2(-R.x,-R.y)).rgb*0.1216; return c; }",
-        "",
-        "vec2 camMap(vec3 R){",
-        "  float PI=3.141592653589793; R=normalize(R); R.z=max(R.z,1e-3);",
+        "vec2 uvDirect(vec2 uv){ vec2 p=(uv-0.5)/max(uCamZoom,1.0)+0.5; if(uFlip>0.5) p.x=1.0-p.x; p=clamp(p, vec2(uUVMargin), vec2(1.0-uUVMargin)); return p; }",
+        "vec2 uvEnv(vec3 R){ float PI=3.141592653589793; R=normalize(R); R.z=max(R.z,1e-3);",
         "  float phi=atan(R.x,R.z); float theta=asin(clamp(R.y,-1.0,1.0));",
         "  float u=(uProjection<0.5)?(0.5+phi/uHFov):(0.5+phi/PI);",
         "  float v=(uProjection<0.5)?(0.5-theta/uVFov):(0.5-theta/(0.5*PI));",
-        "  if(uFlip>0.5) u=1.0-u;",
-        "  float z=max(uCamZoom,1.0); vec2 uv=(vec2(u,v)-0.5)/z+0.5;",
-        "  uv=clamp(uv, vec2(uUVMargin), vec2(1.0-uUVMargin));",
-        "  return uv;",
-        "}",
+        "  if(uFlip>0.5) u=1.0-u; vec2 p=(vec2(u,v)-0.5)/max(uCamZoom,1.0)+0.5; p=clamp(p, vec2(uUVMargin), vec2(1.0-uUVMargin)); return p; }",
         "",
-        "// Rounded-rect SDF (box half-size b, corner r), p in aspect-corrected space",
+        "// Rounded-rect SDF",
         "float sdRoundRect(vec2 p, vec2 b, float r){ vec2 q=abs(p)-(b-vec2(r)); return length(max(q,0.0))+min(max(q.x,q.y),0.0)-r; }",
-        "",
-        "// Height only from the edge band (flat interior).",
-        "float heightRR(vec2 p, vec2 b, float r){",
-        "  float sd=sdRoundRect(p,b,r); if(sd>=0.0) return 0.0;",        // outside (or edge): handled by alpha; height only inside
-        "  float di=clamp(-sd, 0.0, uEdgeWidth);",
-        "  float s=1.0 - di/uEdgeWidth;                 // 1 at edge, 0 at inner band limit",
-        "  float ss = s*s*(3.0-2.0*s);                  // smoothstep profile",
-        "  float h = uEdgeAmp * pow(ss, uEdgeHard);     // hardness shapes rim",
-        "  return h;",
-        "}",
+        "float heightRim(vec2 p, vec2 b, float r){ float sd=sdRoundRect(p,b,r); if(sd>=0.0) return 0.0; float di=clamp(-sd,0.0,uEdgeWidth);",
+        "  float s=1.0 - di/uEdgeWidth; float ss=s*s*(3.0-2.0*s); return uEdgeAmp*pow(ss,uEdgeHard); }",
         "",
         "void main(){",
-        "  float aspect=uRes.x/max(uRes.y,1.0);",
-        "  vec2 p=(vUv-0.5)*vec2(aspect,1.0);",
-        "  vec2 b=vec2(aspect*0.5, 0.5);",
-        "  float corner=clamp(uCorner,0.0,0.49);",
+        "  float aspect=uRes.x/max(uRes.y,1.0); vec2 p=(vUv-0.5)*vec2(aspect,1.0); vec2 b=vec2(aspect*0.5, 0.5);",
+        "  float corner=clamp(uCorner,0.0,0.49); float sd=sdRoundRect(p,b,corner);",
+        "  float aa=1.8/min(uRes.x,uRes.y); float alpha=smoothstep(aa, -aa, sd);",
         "",
-        "  // Flat by default",
-        "  float sd=sdRoundRect(p,b,corner);",
-        "  float z=0.0;",
-        "  if(uShape>6.5){",
-        "    z=heightRR(p,b,corner);",
-        "  } else if (uShape>5.5){",
-        "    z=0.0; // flat material ref",
-        "  } else {",
-        "    // legacy shapes (simple dome/pill) if needed",
-        "    float R=0.5; vec2 pp=p; if(uShape>1.5 && uShape<2.5) pp.x/=1.8; float rr=length(pp)/R; z=0.06*(1.0-min(rr,1.0));",
+        "  // Stages",
+        "  if(uStage<0.5){",
+        "    // A — raw mirror (direct video, no post)",
+        "    vec3 col=texture2D(uCam, uvDirect(vUv)).rgb;",
+        "    gl_FragColor=vec4(col,1.0); return;",
+        "  }",
+        "  // Post stack helper",
+        "  vec3 sampleDirect=texture2D(uCam, uvDirect(vUv)).rgb;",
+        "  vec3 postB = blur9(uvDirect(vUv), uBlur);",
+        "  vec3 postS = blur9(uvDirect(vUv), max(0.5, uBlur*0.6));",
+        "  vec3 postSharpen = clamp(sampleDirect + uSharpen*(sampleDirect - postS), 0.0, 1.0);",
+        "  vec3 postCol = mix(postSharpen, postB, smoothstep(0.0,1.2,uBlur));",
+        "  postCol = applyExposure(postCol, uExposure); postCol = applySaturation(postCol, uSaturation);",
+        "  float L=luma(postCol); float hi=smoothstep(uHiThresh,1.0,L)*uHiBoost; postCol *= (1.0+hi);",
+        "",
+        "  if(uStage<1.5){",
+        "    // B — post only",
+        "    gl_FragColor=vec4(clamp(postCol,0.0,1.0),1.0); return;",
         "  }",
         "",
-        "  // Normal from finite differences of the (edge-only) height field",
+        "  // Common material bits",
+        "  vec3 base=uBaseColor; float blend=uBlendMode;",
+        "  // Flat center normal",
+        "  float z = (uStage>2.5)? heightRim(p,b,corner): 0.0; // stage D only shapes rim",
         "  float e=1.5/max(uRes.x,uRes.y);",
-        "  float zx1= (uShape>6.5)? heightRR(p+vec2(e,0.0),b,corner): z;",
-        "  float zx0= (uShape>6.5)? heightRR(p-vec2(e,0.0),b,corner): z;",
-        "  float zy1= (uShape>6.5)? heightRR(p+vec2(0.0,e),b,corner): z;",
-        "  float zy0= (uShape>6.5)? heightRR(p-vec2(0.0,e),b,corner): z;",
-        "  vec2 grad=0.5*vec2(zx1-zx0, zy1-zy0)/e;",
-        "  vec3 N=normalize(vec3(-grad, 1.0));",
-        "  if(uRipple>0.001){ float rp=sin((p.x*20.0+p.y*18.0)+uTime*0.7)*0.5+0.5; N.xy+=(rp-0.5)*(uRipple*0.3); N=normalize(N);} ",
-        "  N=normalize(mix(vec3(0.0,0.0,1.0), N, clamp(uRound,0.0,1.0)));",
+        "  float zx1=heightRim(p+vec2(e,0.0),b,corner); float zx0=heightRim(p-vec2(e,0.0),b,corner);",
+        "  float zy1=heightRim(p+vec2(0.0,e),b,corner); float zy0=heightRim(p-vec2(0.0,e),b,corner);",
+        "  vec2 grad= (uStage>2.5)? 0.5*vec2(zx1-zx0,zy1-zy0)/e : vec2(0.0);",
+        "  vec3 N=normalize(vec3(-grad,1.0)); N=normalize(mix(vec3(0,0,1), N, uRound));",
+        "  vec3 V=vec3(0,0,1); vec3 R=reflect(-V,N); R.z=max(R.z,1e-3);",
         "",
-        "  // Reflection sample (center is true mirror with N=⟨0,0,1⟩)",
-        "  vec3 V=vec3(0.0,0.0,1.0); vec3 R=reflect(-V,N); R.z=max(R.z,1e-3);",
-        "  vec2 camUV=camMap(R);",
-        "  vec3 envRaw=texture2D(uCam, camUV).rgb;",
-        "  vec3 envB  =sampleBlur9(camUV, uBlur);",
-        "  vec3 envS  =sampleBlur9(camUV, max(0.5, uBlur*0.6));",
-        "  vec3 envSharp=clamp(envRaw + uSharpen*(envRaw - envS), 0.0, 1.0);",
-        "  vec3 env=mix(envSharp, envB, smoothstep(0.0,1.2,uBlur));",
-        "  env=applyExposure(env,uExposure); env=applySaturation(env,uSaturation);",
-        "  float L=luma(env); float hi=smoothstep(uHiThresh,1.0,L)*uHiBoost; env*= (1.0+hi);",
+        "  // Rim mix: center uses direct mirror; rim blends toward env mapping",
+        "  float di=clamp(-sd,0.0,uEdgeWidth); float rimT=clamp(di/uEdgeWidth, 0.0, 1.0);",
+        "  float envW = (uStage>2.5)? (uRimMix*rimT) : 0.0; // stages A/B/C use 0; D uses slider",
+        "  vec2 uvD = uvDirect(vUv);",
+        "  vec2 uvE = uvEnv(R);",
+        "  vec2 uv  = mix(uvD, uvE, envW);",
+        "  vec3 envRaw = texture2D(uCam, uv).rgb;",
+        "  vec3 envB   = blur9(uv, uBlur);",
+        "  vec3 envS   = blur9(uv, max(0.5,uBlur*0.6));",
+        "  vec3 envSharp = clamp(envRaw + uSharpen*(envRaw - envS), 0.0, 1.0);",
+        "  vec3 env = mix(envSharp, envB, smoothstep(0.0,1.2,uBlur));",
+        "  env = applyExposure(env, uExposure); env = applySaturation(env, uSaturation);",
+        "  float L2=luma(env); float hi2=smoothstep(uHiThresh,1.0,L2)*uHiBoost; env *= (1.0+hi2);",
         "",
         "  float NdV=clamp(dot(N,V),0.0,1.0); float F0=0.90; float F=F0 + (1.0-F0)*pow(1.0-NdV,5.0);",
-        "  vec3 base=uBaseColor; vec3 refl=env*(uEnvMix*F); vec3 col;",
-        "  if(uBlendMode<0.5)      col=mix(base, base+refl, uEnvMix);",
-        "  else if(uBlendMode<1.5) col=blendScreen(base, refl);",
-        "  else if(uBlendMode<2.5) col=blendOverlay(base, refl);",
-        "  else                    col=blendSoft(base, refl);",
+        "  vec3 refl = env*(uEnvMix*F); vec3 col;",
+        "  if(blend<0.5)      col = mix(base, base+refl, uEnvMix);",
+        "  else if(blend<1.5) col = screen(base, refl);",
+        "  else if(blend<2.5) col = overlay(base, refl);",
+        "  else               col = soft(base, refl);",
         "",
-        "  // Glow",
+        "  // Add minimal glow",
         "  float bright=max(max(env.r,env.g),env.b);",
-        "  float gMask=max(0.0, bright-uGlowT)+pow(1.0-NdV,4.0)*0.25; col+= sampleBlur9(camUV,3.0)*gMask*uGlow;",
+        "  float gMask=max(0.0, bright-uGlowT)+pow(1.0-NdV,4.0)*0.2; col+= blur9(uv,2.5)*gMask*uGlow;",
         "",
-        "  // Alpha from rounded-rect; outside transparent (AA)",
-        "  float aa=1.8/min(uRes.x,uRes.y); float alpha=smoothstep(aa, -aa, sd);",
-        "  col=clamp(col,0.0,1.0)*alpha; gl_FragColor=vec4(col, alpha);",
+        "  if(uStage<2.5){",
+        "    // C — material (flat): no masking, full rect",
+        "    gl_FragColor=vec4(clamp(col,0.0,1.0),1.0); return;",
+        "  }",
+        "  // D — full: apply rounded-rect alpha",
+        "  col=clamp(col,0.0,1.0); gl_FragColor=vec4(col,alpha);",
         "}"
       ].join("\n");
 
-      const vs = compile(gl.VERTEX_SHADER, vsSrc);
-      const fs = compile(gl.FRAGMENT_SHADER, fsSrc);
-      const prog = gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
-      if(!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
-      gl.useProgram(prog);
+      const vs=compile(gl.VERTEX_SHADER,vsSrc);
+      const fs=compile(gl.FRAGMENT_SHADER,fsSrc);
+      const prog=gl.createProgram(); gl.attachShader(prog,vs); gl.attachShader(prog,fs); gl.linkProgram(prog);
+      if(!gl.getProgramParameter(prog,gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+      gl.useProgram(prog); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0,0,0,0);
 
-      // premultiplied alpha blending
-      gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); gl.clearColor(0,0,0,0);
+      const quad=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+      gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1, 1,-1, -1,1,  -1,1, 1,-1, 1,1]),gl.STATIC_DRAW);
+      const aPos=gl.getAttribLocation(prog,"aPos"); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
 
-      const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([ -1,-1, 1,-1, -1,1,  -1,1, 1,-1, 1,1 ]), gl.STATIC_DRAW);
-      const aPos = gl.getAttribLocation(prog,'aPos'); gl.enableVertexAttribArray(aPos); gl.vertexAttribPointer(aPos,2,gl.FLOAT,false,0,0);
+      const tex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,tex);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
 
-      const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-
-      function U(n){ return gl.getUniformLocation(prog, n); }
-      const uniforms = {
-        uCam:U('uCam'), uCamSize:U('uCamSize'), uRes:U('uRes'), uTime:U('uTime'),
-        uHFov:U('uHFov'), uVFov:U('uVFov'), uFlip:U('uFlip'),
-        uProjection:U('uProjection'), uCamZoom:U('uCamZoom'), uUVMargin:U('uUVMargin'),
-        uRipple:U('uRipple'), uRound:U('uRound'),
-        uShape:U('uShape'), uCorner:U('uCorner'), uEdgeAmp:U('uEdgeAmp'), uEdgeWidth:U('uEdgeWidth'), uEdgeHard:U('uEdgeHard'),
-        uBaseColor:U('uBaseColor'), uEnvMix:U('uEnvMix'), uExposure:U('uExposure'), uSaturation:U('uSaturation'),
-        uBlur:U('uBlur'), uSharpen:U('uSharpen'), uGlow:U('uGlow'), uGlowT:U('uGlowT'),
-        uBlendMode:U('uBlendMode'), uHiBoost:U('uHiBoost'), uHiThresh:U('uHiThresh')
+      function U(n){ return gl.getUniformLocation(prog,n); }
+      const uniforms={
+        uCam:U('uCam'),uCamSize:U('uCamSize'),uRes:U('uRes'),uTime:U('uTime'),
+        uHFov:U('uHFov'),uVFov:U('uVFov'),uFlip:U('uFlip'),uProjection:U('uProjection'),
+        uCamZoom:U('uCamZoom'),uUVMargin:U('uUVMargin'),uRound:U('uRound'),uStage:U('uStage'),
+        uRimMix:U('uRimMix'),uCorner:U('uCorner'),uEdgeAmp:U('uEdgeAmp'),uEdgeWidth:U('uEdgeWidth'),uEdgeHard:U('uEdgeHard'),
+        uBaseColor:U('uBaseColor'),uEnvMix:U('uEnvMix'),uExposure:U('uExposure'),uSaturation:U('uSaturation'),
+        uBlur:U('uBlur'),uSharpen:U('uSharpen'),uGlow:U('uGlow'),uGlowT:U('uGlowT'),
+        uBlendMode:U('uBlendMode'),uHiBoost:U('uHiBoost'),uHiThresh:U('uHiThresh')
       };
-      return { gl, prog, tex, uniforms };
+      return {gl,prog,tex,uniforms};
     };
   }
-  const makeGL = window.EnvMirror.makeGL;
+  const makeGL=window.EnvMirror.makeGL;
 
   /* Engine */
-  if (!window.EnvButtons) {
-    window.EnvButtons = (function(){
-      const instances = new Map();
-      function hfovToVfov(hfov, aspect){ return 2*Math.atan(Math.tan(hfov/2)/aspect); }
-      function shapeCode(name){
-        if(name==='flat') return 6.0;
-        if(name==='roundrect') return 7.0;
-        if(name==='pill') return 2.0;
-        if(name==='squircle') return 4.0;
-        return 6.0;
-      }
-      function blendCode(s){ return s==='screen'?1.0 : s==='overlay'?2.0 : s==='soft'?3.0 : 0.0; }
-      function parseHex(hex, fallback){
-        const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");
-        if(!m) return fallback||[0.82,0.84,0.87];
-        return [parseInt(m[1],16)/255, parseInt(m[2],16)/255, parseInt(m[3],16)/255];
-      }
+  if(!window.EnvButtons){
+    window.EnvButtons=(function(){
+      const instances=new Map();
+      function hfovToVfov(hfov,aspect){return 2*Math.atan(Math.tan(hfov/2)/aspect);}
+      function blendCode(s){return s==='screen'?1.0:(s==='overlay'?2.0:(s==='soft'?3.0:0.0));}
+      function hex3(hex){const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex||"");return m?[parseInt(m[1],16)/255,parseInt(m[2],16)/255,parseInt(m[3],16)/255]:[0.82,0.84,0.87];}
 
-      function create(host, opts){
-        const options = Object.assign({
-          hfovDeg:100, projection:'rect', flip:true,
-          ripple:0.00, roundHint:0.70,
-          base:[0.82,0.84,0.87], envMix:0.48, exposure:1.30, saturation:1.0,
-          blur:1.00, sharpen:0.50, glow:0.40, glowT:0.62,
-          edgeAmp:0.30, edgeWidth:0.08, edgeHard:1.20,
-          camZoom:1.18, uvMargin:0.04,
-          corner: parseFloat(host.getAttribute('data-corner')||'0.22'),
-          hiBoost:0.40, hiThresh:0.62, blend:'screen'
-        }, opts||{});
-        const dataBase = host.getAttribute('data-base'); if (dataBase) options.base = parseHex(dataBase, options.base);
-        const shapeName = host.getAttribute('data-shape') || 'roundrect';
+      function create(host,opts){
+        const stage=parseInt(host.getAttribute('data-stage')||'3',10);
+        const options=Object.assign({
+          hfovDeg:100,projection:'rect',flip:true,
+          roundHint:0.70,corner:0.22,
+          edgeAmp:0.30,edgeWidth:0.08,edgeHard:1.20,rimMix:1.00,
+          base:[0.82,0.84,0.87],envMix:0.48,exposure:1.20,saturation:1.0,
+          blur:0.80,sharpen:0.40,glow:0.30,glowT:0.62,blend:'screen',
+          camZoom:1.20,uvMargin:0.04
+        },opts||{});
+        const bc=document.getElementById('baseColor'); if(bc && bc.value) options.base=hex3(bc.value);
 
-        let canvas = host.querySelector('canvas'); if(!canvas){ canvas=document.createElement('canvas'); host.appendChild(canvas); }
-        const glx = makeGL(canvas); const gl = glx.gl;
+        let canvas=host.querySelector('canvas'); if(!canvas){canvas=document.createElement('canvas');host.appendChild(canvas);}
+        const glx=makeGL(canvas), gl=glx.gl;
+        const dpr=Math.max(1,window.devicePixelRatio||1);
+        function resize(){const r=host.getBoundingClientRect(); const W=Math.max(1,(r.width*dpr)|0), H=Math.max(1,(r.height*dpr)|0);
+          if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;gl.viewport(0,0,W,H);} }
+        const ro=new ResizeObserver(resize); ro.observe(host); resize();
 
-        const dpr = Math.max(1, window.devicePixelRatio||1);
-        function resize(){
-          const r = host.getBoundingClientRect();
-          const W = Math.max(1,(r.width*dpr)|0), H = Math.max(1,(r.height*dpr)|0);
-          if(canvas.width!==W||canvas.height!==H){ canvas.width=W; canvas.height=H; gl.viewport(0,0,W,H); }
-        }
-        const ro = new ResizeObserver(resize); ro.observe(host); resize();
-
-        const t0 = performance.now();
+        const t0=performance.now();
         function frame(now){
-          const v = Camera.state.video; if(!v){ requestAnimationFrame(frame); return; }
+          const v=Camera.state.video; if(!v){requestAnimationFrame(frame);return;}
           gl.clear(gl.COLOR_BUFFER_BIT);
-          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, glx.tex);
-          try{ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,v); }catch(e){}
+          gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,glx.tex);
+          try{gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,v);}catch(e){}
+          const r=host.getBoundingClientRect();
+          const hf=options.hfovDeg*Math.PI/180, vf=hfovToVfov(hf,(v.videoWidth||16)/(v.videoHeight||9));
 
-          const r = host.getBoundingClientRect();
-          gl.uniform2f(glx.uniforms.uRes, r.width, r.height);
-          gl.uniform1i(glx.uniforms.uCam, 0);
-          gl.uniform2f(glx.uniforms.uCamSize, v.videoWidth||640, v.videoHeight||480);
-
-          const hf = options.hfovDeg*Math.PI/180;
-          const vf = hfovToVfov(hf, (v.videoWidth||16)/(v.videoHeight||9));
-          gl.uniform1f(glx.uniforms.uHFov, hf);
-          gl.uniform1f(glx.uniforms.uVFov, vf);
-          gl.uniform1f(glx.uniforms.uFlip, options.flip?1.0:0.0);
-
-          gl.uniform1f(glx.uniforms.uProjection, options.projection==='rect'? 0.0 : 1.0);
+          gl.uniform2f(glx.uniforms.uRes,r.width,r.height);
+          gl.uniform1i(glx.uniforms.uCam,0);
+          gl.uniform2f(glx.uniforms.uCamSize,v.videoWidth||640,v.videoHeight||480);
+          gl.uniform1f(glx.uniforms.uHFov,hf); gl.uniform1f(glx.uniforms.uVFov,vf);
+          gl.uniform1f(glx.uniforms.uFlip,options.flip?1.0:0.0);
+          gl.uniform1f(glx.uniforms.uProjection, options.projection==='rect'?0.0:1.0);
           gl.uniform1f(glx.uniforms.uCamZoom, options.camZoom);
           gl.uniform1f(glx.uniforms.uUVMargin, options.uvMargin);
 
-          gl.uniform1f(glx.uniforms.uRipple, options.ripple);
           gl.uniform1f(glx.uniforms.uRound, options.roundHint);
-
-          gl.uniform1f(glx.uniforms.uShape, shapeCode(shapeName));
+          gl.uniform1f(glx.uniforms.uStage, stage);
+          gl.uniform1f(glx.uniforms.uRimMix, options.rimMix);
           gl.uniform1f(glx.uniforms.uCorner, options.corner);
           gl.uniform1f(glx.uniforms.uEdgeAmp, options.edgeAmp);
           gl.uniform1f(glx.uniforms.uEdgeWidth, options.edgeWidth);
           gl.uniform1f(glx.uniforms.uEdgeHard, options.edgeHard);
 
-          gl.uniform3f(glx.uniforms.uBaseColor, options.base[0], options.base[1], options.base[2]);
+          gl.uniform3f(glx.uniforms.uBaseColor, options.base[0],options.base[1],options.base[2]);
           gl.uniform1f(glx.uniforms.uEnvMix, options.envMix);
           gl.uniform1f(glx.uniforms.uExposure, options.exposure);
           gl.uniform1f(glx.uniforms.uSaturation, options.saturation);
@@ -446,80 +370,60 @@
           gl.uniform1f(glx.uniforms.uSharpen, options.sharpen);
           gl.uniform1f(glx.uniforms.uGlow, options.glow);
           gl.uniform1f(glx.uniforms.uGlowT, options.glowT);
-          gl.uniform1f(glx.uniforms.uBlendMode, (options.blend==='screen'?1.0:options.blend==='overlay'?2.0:options.blend==='soft'?3.0:0.0));
-          gl.uniform1f(glx.uniforms.uHiBoost, options.hiBoost);
-          gl.uniform1f(glx.uniforms.uHiThresh, options.hiThresh);
-
-          gl.uniform1f(glx.uniforms.uTime, (now - t0)/1000);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
+          gl.uniform1f(glx.uniforms.uBlendMode, blendCode(options.blend));
+          gl.uniform1f(glx.uniforms.uHiBoost, options.hiBoost||0.35);
+          gl.uniform1f(glx.uniforms.uHiThresh, options.hiThresh||0.60);
+          gl.uniform1f(glx.uniforms.uTime,(now-t0)/1000);
+          gl.drawArrays(gl.TRIANGLES,0,6);
           requestAnimationFrame(frame);
         }
         requestAnimationFrame(frame);
-
-        instances.set(host, { host, canvas, glx, options });
+        instances.set(host,{host,canvas,glx,options,stage});
         return instances.get(host);
       }
 
-      async function applyTo(selector, options){
+      async function applyTo(selector,options){
         await Camera.ensure();
-        document.querySelectorAll(selector||'.env-ui').forEach(el=>{
-          if(!el.__envBtn) el.__envBtn = create(el, options);
+        document.querySelectorAll(selector||'.env').forEach(el=>{
+          if(!el.__env){ el.__env=create(el, options); }
         });
       }
-      function setAllOptions(patch){ instances.forEach(inst => Object.assign(inst.options, patch||{})); }
-      return { applyTo, instances, setAllOptions };
+      function setAllOptions(p){ instances.forEach(inst=>Object.assign(inst.options,p||{})); }
+      return {applyTo,instances,setAllOptions};
     })();
   }
 
-  /* UI bindings */
-  document.addEventListener('DOMContentLoaded', async function(){
-    await window.EnvButtons.applyTo('.env-ui', {});
-
-    const $ = (id)=>document.getElementById(id);
-    const bindR = (id, chip, key, fmt=(v)=>v.toFixed(2))=>{
-      const el=$(id); el.addEventListener('input', ()=>{ const v=+el.value; $(chip).textContent=(key==='hfovDeg')? (v+'°') : fmt(v); const p={}; p[key]=v; EnvButtons.setAllOptions(p); });
-      // init
-      const v=+el.value; $(chip).textContent=(key==='hfovDeg')? (v+'°') : fmt(v);
+  /* UI */
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    await window.EnvButtons.applyTo('.env', {});
+    const $=id=>document.getElementById(id);
+    const bind=(id,chip,key,fmt=v=>v.toFixed(2))=>{
+      const el=$(id); if(!el) return; const fire=()=>{
+        const v=(el.type==='color')?el.value:+el.value; if(chip) $(chip).textContent=(key==='hfovDeg')?(v+'°'):fmt(v);
+        const p={}; p[key]=(key==='base')?null:v; window.EnvButtons.setAllOptions(p);
+        if(key==='base'){ const hex=$(id).value; const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+          window.EnvButtons.instances.forEach(i=>i.options.base=[r,g,b]); }
+      };
+      el.addEventListener('input', fire); fire();
     };
-
-    bindR('hfov','hfovVal','hfovDeg', v=>v+'°');
-    bindR('corner','cornerVal','corner');
-    bindR('edgeW','edgeWVal','edgeWidth');
-    bindR('edgeAmp','edgeAmpVal','edgeAmp');
-    bindR('edgeHard','edgeHardVal','edgeHard');
-    bindR('round','roundVal','roundHint');
-    bindR('ripple','rippleVal','ripple');
-    bindR('envMix','envMixVal','envMix');
-    bindR('exposure','expVal','exposure');
-    bindR('sharpen','sharpVal','sharpen');
-    bindR('blur','blurVal','blur');
-    bindR('glow','glowVal','glow');
-    bindR('glowT','glowTVal','glowT');
-    bindR('camZoom','zoomVal','camZoom', v=>v.toFixed(2)+'×');
-    bindR('uvMargin','uvMarginVal','uvMargin', v=>v.toFixed(3));
-    bindR('hiboost','hiboostVal','hiBoost');
-    bindR('hithresh','hithreshVal','hiThresh');
-
-    $('blend').addEventListener('change', ()=> EnvButtons.setAllOptions({ blend: $('blend').value }));
-    $('projection').addEventListener('change', ()=> EnvButtons.setAllOptions({ projection: $('projection').value==='equirect'?'equirect':'rect' }));
-    $('flip').addEventListener('click', ()=> EnvButtons.instances.forEach(inst => inst.options.flip = !inst.options.flip));
-
-    $('baseColor').addEventListener('input', ()=>{
-      const hex=$('baseColor').value;
-      const r=parseInt(hex.slice(1,3),16)/255, g=parseInt(hex.slice(3,5),16)/255, b=parseInt(hex.slice(5,7),16)/255;
-      EnvButtons.instances.forEach(inst => inst.options.base=[r,g,b]);
-    });
-
-    $('reset').addEventListener('click', ()=>{
-      EnvButtons.setAllOptions({
-        hfovDeg:100, projection:'rect', flip:true, ripple:0.00, roundHint:0.70,
-        base:[0.82,0.84,0.87], envMix:0.48, exposure:1.30, saturation:1.0,
-        blur:1.00, sharpen:0.50, glow:0.40, glowT:0.62,
-        edgeAmp:0.30, edgeWidth:0.08, edgeHard:1.20,
-        camZoom:1.18, uvMargin:0.04, corner:0.22, hiBoost:0.40, hiThresh:0.62, blend:'screen'
-      });
-      ['hfov','corner','edgeW','edgeAmp','edgeHard','round','ripple','envMix','exposure','sharpen','blur','glow','glowT','camZoom','uvMargin','hiboost','hithresh'].forEach(id=>{
-        const el=$(id); el.dispatchEvent(new Event('input'));
+    bind('hfov','hfovVal','hfovDeg',v=>v+'°'); bind('corner','cornerVal','corner');
+    bind('edgeW','edgeWVal','edgeWidth'); bind('edgeAmp','edgeAmpVal','edgeAmp');
+    bind('edgeHard','edgeHardVal','edgeHard'); bind('rimMix','rimMixVal','rimMix');
+    bind('round','roundVal','roundHint'); bind('envMix','envMixVal','envMix');
+    bind('exposure','expVal','exposure'); bind('sharpen','sharpVal','sharpen');
+    bind('blur','blurVal','blur'); bind('glow','glowVal','glow'); bind('glowT','glowTVal','glowT');
+    bind('camZoom','zoomVal','camZoom',v=>v.toFixed(2)+'×'); bind('uvMargin','uvMarginVal','uvMargin',v=>v.toFixed(3));
+    $('projection').addEventListener('change',()=>EnvButtons.setAllOptions({projection:$('projection').value==='equirect'?'equirect':'rect'}));
+    $('blend').addEventListener('change',()=>EnvButtons.setAllOptions({blend:$('blend').value}));
+    $('flip').addEventListener('click',()=>EnvButtons.instances.forEach(i=>i.options.flip=!i.options.flip));
+    $('baseColor').addEventListener('input',()=>{const hex=$('baseColor').value; const r=parseInt(hex.slice(1,3),16)/255,g=parseInt(hex.slice(3,5),16)/255,b=parseInt(hex.slice(5,7),16)/255;
+      EnvButtons.instances.forEach(i=>i.options.base=[r,g,b]);});
+    $('reset').addEventListener('click',()=>{
+      EnvButtons.setAllOptions({hfovDeg:100,projection:'rect',flip:true,roundHint:0.70,corner:0.22,
+        edgeAmp:0.30,edgeWidth:0.08,edgeHard:1.20,rimMix:1.00,base:[0.82,0.84,0.87],envMix:0.48,exposure:1.20,saturation:1.0,
+        blur:0.80,sharpen:0.40,glow:0.30,glowT:0.62,blend:'screen',camZoom:1.20,uvMargin:0.04,hiBoost:0.35,hiThresh:0.60});
+      ['hfov','corner','edgeW','edgeAmp','edgeHard','rimMix','round','envMix','exposure','sharpen','blur','glow','glowT','camZoom','uvMargin'].forEach(id=>{
+        const el=$(id); el && el.dispatchEvent(new Event('input'));
       });
     });
   });
